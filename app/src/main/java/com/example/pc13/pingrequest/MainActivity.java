@@ -134,9 +134,6 @@ public class MainActivity extends AppCompatActivity {
         }else if(networkInfo.getTypeName().equalsIgnoreCase("Mobile")){
             stringBuilder.append("You are connected through Mobile data");
         }
-
-
-
     }
 
 
