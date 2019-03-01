@@ -15,7 +15,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -215,30 +214,26 @@ public class MainActivity extends AppCompatActivity {
             newLL.addView(pingTextView[i][3], 3, layoutParams);
 
             if (pingType.get(i) == 0){
-                new pingICMP(connURL.get(i), i).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                new PingICMP(connURL.get(i), i).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
             } else if (pingType.get(i) == 1){
-                new pingHTTP(connURL.get(i), i).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                new PingHTTP(connURL.get(i), i).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 
             }
 
-            TextView textRefr = (TextView) findViewById(R.id.textUpdate);
-            textRefr.setText(GetTime());
+
         }
-
-
-
-
-
-
-
-
-
+        TextView textRefr = (TextView) findViewById(R.id.textUpdate);
+        textRefr.setText(getTime());
     }
 
-    private String GetTime() {
+    private void updateClock(){
+        TextView textTime = (TextView) findViewById(R.id.textTime);
+        textTime.setText(getTime());
+    }
+
+    private String getTime() {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("hh:mm:ss");
         String date = simpleDateFormat.format(new Date());
-
         return date;
     }
 
