@@ -3,13 +3,19 @@ package com.example.pc13.pingrequest;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -346,6 +352,49 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter intentFilter = new IntentFilter(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION);
+        this.registerReceiver(wifiBroadcastReceiver, intentFilter);
+    }
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        this.unregisterReceiver(wifiBroadcastReceiver);
+    }
+
+
+
+    BroadcastReceiver wifiBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            TextView textBR = (TextView) findViewById(R.id.textBroadcastReceiver);
+            SupplicantState supplicantState = null;
+            WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            supplicantState = wifiInfo.getSupplicantState();
+            if (supplicantState.equals(SupplicantState.COMPLETED)){
+                //wifi is connected
+                textBR.setTextColor(Color.parseColor("#ffff00"));
+                textBR.setText(getString(R.string.connected));
+
+            }else if(supplicantState.equals(SupplicantState.SCANNING)){
+                textBR.setTextColor(Color.parseColor("#ff0000"));
+                textBR.setText(getString(R.string.scanning));
+
+            }else if (supplicantState.equals(SupplicantState.DISCONNECTED)){
+                textBR.setTextColor(Color.parseColor("#ff0000"));
+                textBR.setText(getString(R.string.notconnected));
+
+            }
+            checkInternetConnection();
+
+        }
+    };
 
 
 } //mainActivity end
