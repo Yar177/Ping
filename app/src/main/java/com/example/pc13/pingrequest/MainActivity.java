@@ -1,7 +1,10 @@
 package com.example.pc13.pingrequest;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -37,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int timeoutSocket = 5000;
     private static final int timeoutReachable = 5000;
     private static final int timeoutInterval = 10000;
+    private static final int updateInterval = 10000;
 
 
 
@@ -47,6 +51,10 @@ public class MainActivity extends AppCompatActivity {
 
     public static JSONArray jsonArray = null;
     public static String configFile = "";
+
+    boolean m_bStatusThreadStop;
+    Thread m_statusThread;
+
 
     private static TextView[][] pingTextView = new TextView[20][3];
 
@@ -92,6 +100,8 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException | JSONException e) {
             e.printStackTrace();
         }
+
+        createAndRunStatusThread(this);
 
 
     }
@@ -157,9 +167,58 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    public void createAndRunStatusThread(final Activity activity){
+        m_bStatusThreadStop = false;
+        m_statusThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!m_bStatusThreadStop){
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                                updateConnectionStatus();
+                        }
+                    });
+                    try {
+                        Thread.sleep(updateInterval);
+                    } catch (InterruptedException e) {
+                        m_bStatusThreadStop = true;
+                        messageBox(activity, "Exception in status thread: " + e.toString() +
+                        " - " + e.getMessage(), "createAndRunStatusThread Error");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        m_statusThread.start();
+    }
+
+    private void messageBox(final Activity activity, final String message, final String title) {
+        this.runOnUiThread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        final AlertDialog alertDialog = new AlertDialog.Builder(activity).create();
+                        alertDialog.setTitle(title);
+                        alertDialog.setIcon(android.R.drawable.stat_sys_warning);
+                        alertDialog.setMessage(message);
+                        alertDialog.setCancelable(false);
+                        alertDialog.setButton("Back", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                alertDialog.cancel();
+                            }
+                        });
+                        alertDialog.show();
+                    }
+                }
+
+        );
+    }
 
 
-    private void updateConnectionStatus(){
+    public void updateConnectionStatus(){
 
         img = (ImageView) findViewById(R.id.image1);
         img.setBackgroundResource(R.drawable.presence_invisible);
