@@ -3,6 +3,7 @@ package com.example.pc13.pingrequest;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.support.annotation.NonNull;
@@ -14,9 +15,35 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 12111;
+    private static final int timeoutConnection = 5000;
+    private static final int timeoutSocket = 5000;
+    private static final int timeoutReachable = 5000;
+    private static final int timeoutInterval = 10000;
+
+
+
+    ArrayList<Integer> pingType = new ArrayList<Integer>();
+    ArrayList<String > connName = new ArrayList<String >();
+    ArrayList<String > connURL = new ArrayList<String >();
+    ArrayList<String > response = new ArrayList<String >();
+
+    public static JSONArray jsonArray = null;
+    public static String configFile = "";
+
+
+
+
     TextView currentConectivity;
     TextView pingStatus;
     Button pingICMP;
@@ -36,6 +63,33 @@ public class MainActivity extends AppCompatActivity {
 
         checkPermission();
 
+
+        Resources resources = getResources();
+        InputStream inputStream = resources.openRawResource(R.raw.connectionfile);
+
+        try {
+            byte[] bytes = new byte[inputStream.available()];
+            inputStream.read(bytes);
+
+            configFile = (new String(bytes));
+
+            jsonArray = new JSONArray(configFile);
+
+            for (int i =0; i < jsonArray.length(); i++){
+                int type = (Integer) jsonGetter2(jsonArray.getJSONArray(i), "type");
+                pingType.add(type);
+                String cname = jsonGetter2(jsonArray.getJSONArray(i),"name").toString();
+                connName.add(cname);
+                String url = jsonGetter2(jsonArray.getJSONArray(i),"url").toString();
+                connURL.add(url);
+                String resp = jsonGetter2(jsonArray.getJSONArray(i),"res").toString();
+                response.add(resp);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
 
 
     }
@@ -83,5 +137,22 @@ public class MainActivity extends AppCompatActivity {
 
         currentConectivity.setText(stringBuilder);
 
+    }
+
+
+    private Object jsonGetter2(JSONArray jsonArray,String key){
+            Object object = null;
+            for (int i = 0; i<jsonArray.length() ;i++){
+                try {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    if (jsonObject.has(key)){
+                        object = jsonObject.get(key);
+                    }
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }            }
+
+        return object;
     }
 }
