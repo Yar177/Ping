@@ -7,13 +7,17 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,7 +27,9 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,6 +48,8 @@ public class MainActivity extends AppCompatActivity {
 
     public static JSONArray jsonArray = null;
     public static String configFile = "";
+
+    private static TextView[][] pingTextView = new TextView[20][3];
 
 
     ImageView img;
@@ -163,9 +171,75 @@ public class MainActivity extends AppCompatActivity {
             img.setBackgroundResource(R.drawable.presence_busy);
         }
 
+        LinearLayout pingLinerLayout = (LinearLayout) findViewById(R.id.insertPings);
+        pingLinerLayout.removeAllViews();
+
+        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+
+        layoutParams.setMargins(5,5,5,5);
+        layoutParams.gravity = Gravity.CENTER;
+
+
+        final float WIDE = this.getResources().getDisplayMetrics().widthPixels;
+        int valueWide = (int) (WIDE * 0.30f);
+        LinearLayout.LayoutParams layoutParamsTV = new LinearLayout.LayoutParams(valueWide, LinearLayout.LayoutParams.WRAP_CONTENT);
+        layoutParamsTV.setMargins(5,5,5,5);
+        layoutParamsTV.gravity = Gravity.CENTER;
+
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        this.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        int fontSize = (int)(WIDE/36.0f/(displayMetrics.scaledDensity));
+
+
+        for (int i = 0; i < pingType.size(); i++){
+            LinearLayout newLL;
+            newLL = new LinearLayout((MainActivity.this));
+            newLL.setLayoutParams(layoutParams);
+            newLL.setOrientation(LinearLayout.HORIZONTAL);
+            newLL.setHorizontalGravity(Gravity.CENTER);
+            pingLinerLayout.addView(newLL, i);
+
+            pingTextView[i][0] = new TextView(MainActivity.this);
+            pingTextView[i][0].setText(connName.get(i));
+            pingTextView[i][0].setTextSize(fontSize);
+            newLL.addView(pingTextView[i][0], 0, layoutParams);
+
+            pingTextView[i][1] = new TextView(MainActivity.this);
+            pingTextView[i][1].setText(connName.get(i));
+            pingTextView[i][1].setTextSize(fontSize);
+            newLL.addView(pingTextView[i][1], 1, layoutParams);
+
+            pingTextView[i][2] = new TextView(MainActivity.this);
+            pingTextView[i][2].setText(connName.get(i));
+            pingTextView[i][2].setTextSize(fontSize);
+            newLL.addView(pingTextView[i][3], 3, layoutParams);
+
+            if (pingType.get(i) == 0){
+                new pingICMP(connURL.get(i), i).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+            } else if (pingType.get(i) == 1){
+                new pingHTTP(connURL.get(i), i).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+
+            }
+
+            TextView textRefr = (TextView) findViewById(R.id.textUpdate);
+            textRefr.setText(GetTime());
+        }
 
 
 
+
+
+
+
+
+
+    }
+
+    private String GetTime() {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("hh:mm:ss");
+        String date = simpleDateFormat.format(new Date());
+
+        return date;
     }
 
     private boolean checkInternetConnection() {
