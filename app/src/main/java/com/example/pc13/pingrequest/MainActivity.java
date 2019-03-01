@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.support.annotation.NonNull;
@@ -12,6 +13,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,23 +44,18 @@ public class MainActivity extends AppCompatActivity {
     public static String configFile = "";
 
 
+    ImageView img;
 
 
-    TextView currentConectivity;
-    TextView pingStatus;
-    Button pingICMP;
-    Button pingHTTP;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        currentConectivity = (TextView) findViewById(R.id.current_network);
-        pingStatus = (TextView) findViewById(R.id.ping_status);
 
-        pingHTTP = (Button) findViewById(R.id.ping_http);
-        pingICMP = (Button) findViewById(R.id.ping_icmp);
 
 
         checkPermission();
@@ -131,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
             stringBuilder.append("You are connected through Mobile data");
         }
 
-        currentConectivity.setText(stringBuilder);
+
 
     }
 
@@ -157,22 +154,70 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateConnectionStatus(){
 
+        img = (ImageView) findViewById(R.id.image1);
+        img.setBackgroundResource(R.drawable.presence_invisible);
+
+        if (checkInternetConnection()){
+         img.setBackgroundResource(R.drawable.presence_online);
+        }else {
+            img.setBackgroundResource(R.drawable.presence_busy);
+        }
+
+
+
+
     }
 
+    private boolean checkInternetConnection() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
+
+        TextView connType = (TextView) findViewById(R.id.textType);
+        TextView connAval = (TextView) findViewById(R.id.textAvail);
+        TextView connConn = (TextView) findViewById(R.id.textConn);
 
 
+        connType.setText(getString(R.string.unknown));
 
+        if (connectivityManager != null && networkInfo != null){
+            if (networkInfo.getTypeName().equalsIgnoreCase("WIFI")){
+                connType.setText(getString(R.string.wifi));
+            }
 
+            if (networkInfo.getTypeName().equalsIgnoreCase("MOBILE")){
+                connType.setText(getString(R.string.mobile));
+            }
+            if (networkInfo.isAvailable()){
+                connAval.setText(getString(R.string.available));
+                connAval.setTextColor(Color.parseColor("#5d9356"));
+                if (networkInfo.isConnected()){
+                    connConn.setText(getString(R.string.connected));
+                    connConn.setTextColor(Color.parseColor("#5d9356"));
+                    return true;
 
+                }else {
+                    connConn.setText(getString(R.string.notconnected));
+                    connConn.setTextColor(Color.parseColor("#ff0000"));
+                    return false;
+                }
+            }else {
+                connAval.setTextColor(Color.parseColor("#ff0000"));
+                connAval.setText(getString(R.string.notavailable));
+                return false;
+            }
+        }else {
+            connType.setText(getString(R.string.unknown));
 
+            connConn.setText(getString(R.string.notconnected));
+            connConn.setTextColor(Color.parseColor("#ff0000"));
 
+            connAval.setTextColor(Color.parseColor("#ff0000"));
+            connAval.setText(getString(R.string.notavailable));
 
+            return false;
+        }
 
-
-
-
-
-
+    }
 
 
 } //mainActivity end
