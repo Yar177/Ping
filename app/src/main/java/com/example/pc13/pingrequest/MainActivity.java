@@ -59,7 +59,9 @@ public class MainActivity extends AppCompatActivity {
     public static String configFile = "";
 
     boolean m_bStatusThreadStop;
+    boolean m_bClockThreadStop;
     Thread m_statusThread;
+    Thread m_clockThread;
 
 
     private static TextView[][] pingTextView = new TextView[20][3];
@@ -76,11 +78,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
-
         checkPermission();
-
 
         Resources resources = getResources();
         InputStream inputStream = resources.openRawResource(R.raw.connectionfile);
@@ -109,7 +107,35 @@ public class MainActivity extends AppCompatActivity {
 
         createAndRunStatusThread(this);
 
+        createAndRunClockThread(this);
 
+
+    }
+
+    private void createAndRunClockThread(final Activity activity) {
+        m_bClockThreadStop=false;
+        m_clockThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!m_bClockThreadStop){
+             try {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateClock();
+                        }
+                    });
+
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                         m_bStatusThreadStop = true;
+                         messageBox(activity, "Exception in clock thread: " + e.toString() + " - " + e.getMessage(), "createAndRunClockThread Error");
+                    }
+                }
+            }
+        });
+        m_clockThread.start();
     }
 
     void checkPermission(){
