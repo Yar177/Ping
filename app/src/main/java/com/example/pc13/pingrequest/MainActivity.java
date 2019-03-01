@@ -85,9 +85,7 @@ public class MainActivity extends AppCompatActivity {
                 String resp = jsonGetter2(jsonArray.getJSONArray(i),"res").toString();
                 response.add(resp);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
+        } catch (IOException | JSONException e) {
             e.printStackTrace();
         }
 
@@ -100,13 +98,9 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.READ_CONTACTS},
                     MY_PERMISSIONS_REQUEST_READ_CONTACTS);
-
         }else {
             curenrNetworkStatus();
-
-
         }
-
     }
 
 
@@ -157,4 +151,28 @@ public class MainActivity extends AppCompatActivity {
 
         return object;
     }
-}
+
+
+
+
+    private void updateConnectionStatus(){
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+} //mainActivity end
