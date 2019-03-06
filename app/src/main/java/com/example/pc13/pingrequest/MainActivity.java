@@ -24,6 +24,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -198,6 +201,21 @@ public class MainActivity extends AppCompatActivity {
         return object;
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        new MenuInflater(this).inflate(R.menu.actions, menu);
+        return(super.onCreateOptionsMenu(menu));
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.exit) {
+            finish();
+            return(true);
+        }
+        return(super.onOptionsItemSelected(item));
+    }
+
 
     public void createAndRunStatusThread(final Activity activity){
         m_bStatusThreadStop = false;
@@ -302,7 +320,7 @@ public class MainActivity extends AppCompatActivity {
             pingTextView[i][2] = new TextView(MainActivity.this);
             pingTextView[i][2].setText(connName.get(i));
             pingTextView[i][2].setTextSize(fontSize);
-            newLL.addView(pingTextView[i][3], 3, layoutParams);
+            newLL.addView(pingTextView[i][2], 2, layoutParams);
 
             if (pingType.get(i) == 0){
                 new PingICMP(connURL.get(i), i).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
