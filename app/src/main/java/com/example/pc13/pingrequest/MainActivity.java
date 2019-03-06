@@ -38,6 +38,10 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -439,6 +443,127 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
+
+
+
+
+    class PingICMP extends AsyncTask<Void, String, Integer> {
+
+
+        private String ip;
+        private boolean code;
+        private int item;
+        private InetAddress inetAddress;
+
+
+        public PingICMP (String ip, int item) {
+            this.ip = ip;
+            this.inetAddress = null;
+            this.item = item;
+            this.code = false;
+        }
+
+
+        @Override
+        protected Integer doInBackground(Void... voids) {
+            try {
+                inetAddress = InetAddress.getByName(ip);
+
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+                code = false;
+            }
+
+            try {
+                if (inetAddress.isReachable(timeoutReachable)){
+                    code =true;
+                }else {
+                    code = false;
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                code = false;
+            }
+
+            return 1;
+        }
+
+
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            if (code){
+                pingTextView[item][2].setText("Reachable");
+                pingTextView[item][2].setTextColor(Color.parseColor("#5d9356"));
+            }else {
+                pingTextView[item][2].setText("Not Reachable");
+                pingTextView[item][2].setTextColor(Color.parseColor("#ff0000"));
+            }
+        }
+    }
+
+
+
+
+    class PingHTTP extends AsyncTask<Void, String, Integer> {
+
+        private String urlString;
+        private boolean ping_success;
+        private int item;
+        private int status;
+
+
+
+
+        public PingHTTP(String ip, int item) {
+            this.ping_success = false;
+            this.item = item;
+            this.urlString = ip;
+            this.status = 400;
+        }
+
+        @Override
+        protected Integer doInBackground(Void... voids) {
+
+            try {
+                URL url = new URL(urlString);
+                HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setAllowUserInteraction(false);
+                httpURLConnection.setInstanceFollowRedirects(true);
+                httpURLConnection.setRequestMethod("GET");
+                httpURLConnection.connect();
+                status = httpURLConnection.getResponseCode();
+
+                if ((status == HttpURLConnection.HTTP_NO_CONTENT) || (status == HttpURLConnection.HTTP_OK)){
+                    ping_success = true;
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                ping_success = false;
+            }
+
+            return 1;
+        }
+
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            if (ping_success){
+                pingTextView[item][2].setText("Status Code= " + status);
+                pingTextView[item][2].setTextColor(Color.parseColor("#5d9356"));
+            }else {
+                pingTextView[item][2].setText("Status Code= " + status);
+                pingTextView[item][2].setTextColor(Color.parseColor("#ff0000"));
+            }
+        }
+    }
 
 
 } //mainActivity end
