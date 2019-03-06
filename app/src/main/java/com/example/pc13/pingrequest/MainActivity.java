@@ -55,8 +55,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int timeoutInterval = 10000;
     private static final int updateInterval = 10000;
 
-
-
     ArrayList<Integer> pingType = new ArrayList<Integer>();
     ArrayList<String > connName = new ArrayList<String >();
     ArrayList<String > connURL = new ArrayList<String >();
@@ -548,7 +546,6 @@ public class MainActivity extends AppCompatActivity {
 
             return 1;
         }
-
 
         @Override
         protected void onPostExecute(Integer integer) {
