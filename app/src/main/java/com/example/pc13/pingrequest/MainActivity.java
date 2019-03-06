@@ -1,12 +1,21 @@
 package com.example.pc13.pingrequest;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.SupplicantState;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -15,6 +24,9 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -26,6 +38,10 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URL;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int timeoutSocket = 5000;
     private static final int timeoutReachable = 5000;
     private static final int timeoutInterval = 10000;
+    private static final int updateInterval = 10000;
 
 
 
@@ -47,6 +64,12 @@ public class MainActivity extends AppCompatActivity {
 
     public static JSONArray jsonArray = null;
     public static String configFile = "";
+
+    boolean m_bStatusThreadStop;
+    boolean m_bClockThreadStop;
+    Thread m_statusThread;
+    Thread m_clockThread;
+
 
     private static TextView[][] pingTextView = new TextView[20][3];
 
@@ -62,11 +85,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
-
         checkPermission();
-
 
         Resources resources = getResources();
         InputStream inputStream = resources.openRawResource(R.raw.connectionfile);
@@ -93,7 +112,37 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
+        createAndRunStatusThread(this);
 
+        createAndRunClockThread(this);
+
+
+    }
+
+    private void createAndRunClockThread(final Activity activity) {
+        m_bClockThreadStop=false;
+        m_clockThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!m_bClockThreadStop){
+             try {
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateClock();
+                        }
+                    });
+
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                         m_bStatusThreadStop = true;
+                         messageBox(activity, "Exception in clock thread: " + e.toString() + " - " + e.getMessage(), "createAndRunClockThread Error");
+                    }
+                }
+            }
+        });
+        m_clockThread.start();
     }
 
     void checkPermission(){
@@ -153,10 +202,74 @@ public class MainActivity extends AppCompatActivity {
         return object;
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        new MenuInflater(this).inflate(R.menu.actions, menu);
+        return(super.onCreateOptionsMenu(menu));
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.exit) {
+            finish();
+            return(true);
+        }
+        return(super.onOptionsItemSelected(item));
+    }
 
 
+    public void createAndRunStatusThread(final Activity activity){
+        m_bStatusThreadStop = false;
+        m_statusThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!m_bStatusThreadStop){
+                    activity.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                                updateConnectionStatus();
+                        }
+                    });
+                    try {
+                        Thread.sleep(updateInterval);
+                    } catch (InterruptedException e) {
+                        m_bStatusThreadStop = true;
+                        messageBox(activity, "Exception in status thread: " + e.toString() +
+                        " - " + e.getMessage(), "createAndRunStatusThread Error");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
 
-    private void updateConnectionStatus(){
+        m_statusThread.start();
+    }
+
+    private void messageBox(final Activity activity, final String message, final String title) {
+        this.runOnUiThread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        final AlertDialog alertDialog = new AlertDialog.Builder(activity).create();
+                        alertDialog.setTitle(title);
+                        alertDialog.setIcon(android.R.drawable.stat_sys_warning);
+                        alertDialog.setMessage(message);
+                        alertDialog.setCancelable(false);
+                        alertDialog.setButton("Back", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                alertDialog.cancel();
+                            }
+                        });
+                        alertDialog.show();
+                    }
+                }
+
+        );
+    }
+
+
+    public void updateConnectionStatus(){
 
         img = (ImageView) findViewById(R.id.image1);
         img.setBackgroundResource(R.drawable.presence_invisible);
@@ -208,7 +321,7 @@ public class MainActivity extends AppCompatActivity {
             pingTextView[i][2] = new TextView(MainActivity.this);
             pingTextView[i][2].setText(connName.get(i));
             pingTextView[i][2].setTextSize(fontSize);
-            newLL.addView(pingTextView[i][3], 3, layoutParams);
+            newLL.addView(pingTextView[i][2], 2, layoutParams);
 
             if (pingType.get(i) == 0){
                 new PingICMP(connURL.get(i), i).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
@@ -283,6 +396,170 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter intentFilter = new IntentFilter(WifiManager.SUPPLICANT_CONNECTION_CHANGE_ACTION);
+        this.registerReceiver(wifiBroadcastReceiver, intentFilter);
+    }
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        this.unregisterReceiver(wifiBroadcastReceiver);
+    }
+
+
+
+    BroadcastReceiver wifiBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            TextView textBR = (TextView) findViewById(R.id.textBroadcastReceiver);
+            SupplicantState supplicantState = null;
+            WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(WIFI_SERVICE);
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            supplicantState = wifiInfo.getSupplicantState();
+            if (supplicantState.equals(SupplicantState.COMPLETED)){
+                //wifi is connected
+                textBR.setTextColor(Color.parseColor("#ffff00"));
+                textBR.setText(getString(R.string.connected));
+
+            }else if(supplicantState.equals(SupplicantState.SCANNING)){
+                textBR.setTextColor(Color.parseColor("#ff0000"));
+                textBR.setText(getString(R.string.scanning));
+
+            }else if (supplicantState.equals(SupplicantState.DISCONNECTED)){
+                textBR.setTextColor(Color.parseColor("#ff0000"));
+                textBR.setText(getString(R.string.notconnected));
+
+            }
+            checkInternetConnection();
+
+        }
+    };
+
+
+
+
+    class PingICMP extends AsyncTask<Void, String, Integer> {
+
+
+        private String ip;
+        private boolean code;
+        private int item;
+        private InetAddress inetAddress;
+
+
+        public PingICMP (String ip, int item) {
+            this.ip = ip;
+            this.inetAddress = null;
+            this.item = item;
+            this.code = false;
+        }
+
+
+        @Override
+        protected Integer doInBackground(Void... voids) {
+            try {
+                inetAddress = InetAddress.getByName(ip);
+
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+                code = false;
+            }
+
+            try {
+                if (inetAddress.isReachable(timeoutReachable)){
+                    code =true;
+                }else {
+                    code = false;
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                code = false;
+            }
+
+            return 1;
+        }
+
+
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            if (code){
+                pingTextView[item][2].setText("Reachable");
+                pingTextView[item][2].setTextColor(Color.parseColor("#5d9356"));
+            }else {
+                pingTextView[item][2].setText("Not Reachable");
+                pingTextView[item][2].setTextColor(Color.parseColor("#ff0000"));
+            }
+        }
+    }
+
+
+
+
+    class PingHTTP extends AsyncTask<Void, String, Integer> {
+
+        private String urlString;
+        private boolean ping_success;
+        private int item;
+        private int status;
+
+
+
+
+        public PingHTTP(String ip, int item) {
+            this.ping_success = false;
+            this.item = item;
+            this.urlString = ip;
+            this.status = 400;
+        }
+
+        @Override
+        protected Integer doInBackground(Void... voids) {
+
+            try {
+                URL url = new URL(urlString);
+                HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setAllowUserInteraction(false);
+                httpURLConnection.setInstanceFollowRedirects(true);
+                httpURLConnection.setRequestMethod("GET");
+                httpURLConnection.connect();
+                status = httpURLConnection.getResponseCode();
+
+                if ((status == HttpURLConnection.HTTP_NO_CONTENT) || (status == HttpURLConnection.HTTP_OK)){
+                    ping_success = true;
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                ping_success = false;
+            }
+
+            return 1;
+        }
+
+
+        @Override
+        protected void onPostExecute(Integer integer) {
+            if (ping_success){
+                pingTextView[item][2].setText("Status Code= " + status);
+                pingTextView[item][2].setTextColor(Color.parseColor("#5d9356"));
+            }else {
+                pingTextView[item][2].setText("Status Code= " + status);
+                pingTextView[item][2].setTextColor(Color.parseColor("#ff0000"));
+            }
+        }
     }
 
 
