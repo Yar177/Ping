@@ -462,7 +462,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected Integer doInBackground(Void... voids) {
             try {
-                inetAddress = InetAddress.getByName(ip);
+                if (ip != null){
+                    inetAddress = InetAddress.getByName(ip);
+                }
+
 
             } catch (UnknownHostException e) {
                 e.printStackTrace();
@@ -470,10 +473,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
             try {
+                if (inetAddress != null){
+
+
                 if (inetAddress.isReachable(timeoutReachable)){
                     code =true;
                 }else {
                     code = false;
+                }
                 }
 
             } catch (IOException e) {
